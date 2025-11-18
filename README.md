@@ -1,5 +1,5 @@
 
-# Interactive Visual Scheduler Simulator
+# [Interactive Visual Scheduler Simulator](https://1235357.github.io/Interactive-Visual-Scheduler-Simulator/)
 
 > CPS 3250 – Operating Systems Final Project  
 > Kean University · Department of Computer Science  
@@ -22,6 +22,8 @@ This project is a web-based **Process Scheduling Simulator** designed for the co
 The entire app is implemented as a static website (HTML + CSS + JavaScript), making it easy to deploy on **GitHub Pages** (`*.github.io`). All state is stored on the client side (via `localStorage`), so the simulator works without any backend server.
 
 In the GitHub repository, the deployable version of the app lives under the `/docs` folder, so that GitHub Pages can serve `docs/index.html` directly.
+
+https://1235357.github.io/Interactive-Visual-Scheduler-Simulator
 
 ---
 
