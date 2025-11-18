@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Scheduling Simulator - CPS 3250</title>
+    <meta name="description" content="Interactive visual simulator for CPU scheduling algorithms">
+    <link rel="stylesheet" href="style_new.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <div>
+                <h1>Process Scheduling Simulator</h1>
+                <p class="nav-subtitle">CPS 3250 - Operating Systems</p>
+            </div>
+        </div>
+        <div class="nav-actions">
+            <button id="btn-help" onclick="showHelp()" class="btn-icon" title="Help & Tutorial">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            </button>
+            <button id="btn-teaching-mode" onclick="startTeachingMode()" class="btn-primary">Teaching Mode</button>
+        </div>
+    </nav>
+
+    <!-- Tab Navigation -->
+    <div class="tabs-container">
+        <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="setup" onclick="switchTab('setup')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Setup
+            </button>
+            <button class="tab-btn" data-tab="simulate" onclick="switchTab('simulate')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Simulate
+            </button>
+            <button class="tab-btn" data-tab="compare" onclick="switchTab('compare')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                Compare
+            </button>
+            <button class="tab-btn" data-tab="heft" onclick="switchTab('heft')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="5" r="3"/>
+                    <circle cx="12" cy="19" r="3"/>
+                    <circle cx="5" cy="12" r="3"/>
+                    <circle cx="19" cy="12" r="3"/>
+                    <line x1="12" y1="8" x2="12" y2="16"/>
+                    <line x1="8" y1="12" x2="15" y2="12"/>
+                </svg>
+                HEFT/Cloud
+            </button>
+        </div>
+    </div>
+
+    <main id="main-content">
+        <!-- Tab: Setup -->
+        <div id="tab-setup" class="tab-content active">
+            <div class="setup-grid">
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>Add Processes</h2>
+                        <p class="card-subtitle">Define the processes to be scheduled</p>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="pname">Process Name</label>
+                            <input id="pname" type="text" placeholder="Auto-generated if empty" class="input-field">
+                            <span class="field-hint">Leave empty for auto-naming (P1, P2...)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="arrival">Arrival Time</label>
+                            <input id="arrival" type="number" min="0" value="0" class="input-field" required>
+                            <span class="field-hint">When process arrives (≥0)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="burst">Burst Time</label>
+                            <input id="burst" type="number" min="1" value="5" class="input-field" required>
+                            <span class="field-hint">CPU time needed (>0)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="priority">Priority</label>
+                            <input id="priority" type="number" min="0" value="0" class="input-field">
+                            <span class="field-hint">Lower number = higher priority</span>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button onclick="addProcess()" class="btn-primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            Add Process
+                        </button>
+                        <button onclick="loadExample('basic')" class="btn-secondary">Basic Example</button>
+                        <button onclick="loadExample('cpu-heavy')" class="btn-secondary">CPU-Heavy Example</button>
+                        <button onclick="loadExample('bursty')" class="btn-secondary">Bursty Arrivals Example</button>
+                        <button onclick="loadExample('priority')" class="btn-secondary">Priority Example</button>
+                        <button onclick="clearProcesses()" class="btn-secondary">Clear All</button>
+                    </div>
+                </section>
+
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>Process List</h2>
+                        <span class="badge" id="process-count">0 processes</span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="process-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Process</th>
+                                    <th>Arrival</th>
+                                    <th>Burst</th>
+                                    <th>Priority</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <div id="empty-state" class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <line x1="9" y1="9" x2="15" y2="15"/>
+                                <line x1="15" y1="9" x2="9" y2="15"/>
+                            </svg>
+                            <p>No processes added yet</p>
+                            <p class="text-muted">Add your first process above or load an example</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card card-elevated card-algo">
+                    <div class="card-header">
+                        <h2>Choose Scheduling Algorithm</h2>
+                        <p class="card-subtitle">Select the algorithm to visualize</p>
+                    </div>
+                    <div class="algo-grid">
+                        <div class="algo-card" data-algo="fcfs">
+                            <input type="radio" id="algo-fcfs" name="algo" value="fcfs" onclick="onAlgoChange('fcfs')">
+                            <label for="algo-fcfs">
+                                <div class="algo-icon">📋</div>
+                                <h3>FCFS</h3>
+                                <p>First-Come First-Served</p>
+                            </label>
+                        </div>
+                        <div class="algo-card" data-algo="sjf">
+                            <input type="radio" id="algo-sjf" name="algo" value="sjf" onclick="onAlgoChange('sjf')">
+                            <label for="algo-sjf">
+                                <div class="algo-icon">⚡</div>
+                                <h3>SJF</h3>
+                                <p>Shortest Job First</p>
+                            </label>
+                        </div>
+                        <div class="algo-card" data-algo="srtf">
+                            <input type="radio" id="algo-srtf" name="algo" value="srtf" onclick="onAlgoChange('srtf')">
+                            <label for="algo-srtf">
+                                <div class="algo-icon">⏱️</div>
+                                <h3>SRTF</h3>
+                                <p>Shortest Remaining Time</p>
+                            </label>
+                        </div>
+                        <div class="algo-card" data-algo="priority">
+                            <input type="radio" id="algo-priority" name="algo" value="priority" onclick="onAlgoChange('priority')">
+                            <label for="algo-priority">
+                                <div class="algo-icon">🎯</div>
+                                <h3>Priority</h3>
+                                <p>Priority Scheduling</p>
+                            </label>
+                        </div>
+                        <div class="algo-card" data-algo="hrrn">
+                            <input type="radio" id="algo-hrrn" name="algo" value="hrrn" onclick="onAlgoChange('hrrn')">
+                            <label for="algo-hrrn">
+                                <div class="algo-icon">📊</div>
+                                <h3>HRRN</h3>
+                                <p>Highest Response Ratio</p>
+                            </label>
+                        </div>
+                        <div class="algo-card" data-algo="rr">
+                            <input type="radio" id="algo-rr" name="algo" value="rr" onclick="onAlgoChange('rr')">
+                            <label for="algo-rr">
+                                <div class="algo-icon">🔄</div>
+                                <h3>Round Robin</h3>
+                                <p>Time-Slice Rotation</p>
+                            </label>
+                        </div>
+                    </div>
+                    <div id="quantum-config" class="config-section" style="display:none;">
+                        <label for="quantum" class="config-label">Time Quantum for Round Robin</label>
+                        <input id="quantum" type="number" min="1" value="2" class="input-field" oninput="onQuantumChange()">
+                    </div>
+                    <div id="algo-description" class="algo-description"></div>
+                    <button onclick="proceedToSimulation()" class="btn-primary btn-large">
+                        Proceed to Simulation →
+                    </button>
+                </section>
+            </div>
+        </div>
+
+        <!-- Tab: Simulation -->
+        <div id="tab-simulate" class="tab-content">
+            <div class="simulation-layout">
+                <section class="card card-elevated controls-card">
+                    <div class="card-header">
+                        <h2>Simulation Controls</h2>
+                        <div class="status-indicator">
+                            <span class="status-dot" id="sim-status"></span>
+                            <span id="sim-status-text">Ready</span>
+                        </div>
+                    </div>
+                    <div class="controls-grid">
+                        <button id="btn-play" onclick="playSimulation()" class="control-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            Play
+                        </button>
+                        <button id="btn-pause" onclick="pauseSimulation()" class="control-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+                            </svg>
+                            Pause
+                        </button>
+                        <button id="btn-step" onclick="stepSimulation()" class="control-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+                            </svg>
+                            Step
+                        </button>
+                        <button id="btn-reset" onclick="resetSimulation()" class="control-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                            </svg>
+                            Reset
+                        </button>
+                    </div>
+                    <div class="speed-control">
+                        <label for="speed">Animation Speed</label>
+                        <input id="speed" type="range" min="0.25" max="3" step="0.25" value="1" oninput="changeSpeed(this.value)">
+                        <span id="speed-label">1.0x</span>
+                    </div>
+                    <div class="time-display">
+                        <span class="time-label">Current Time:</span>
+                        <span id="current-time" class="time-value">0</span>
+                    </div>
+                </section>
+
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>CPU & Ready Queue</h2>
+                    </div>
+                    <div class="cpu-queue-container">
+                        <div class="cpu-visualization">
+                            <div class="cpu-label">CPU</div>
+                            <div id="cpu-content" class="cpu-display">
+                                <div class="idle-indicator">Idle</div>
+                            </div>
+                        </div>
+                        <div class="queue-visualization">
+                            <div class="queue-label">Ready Queue</div>
+                            <div id="queue-content" class="queue-display"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card card-elevated gantt-section">
+                    <div class="card-header">
+                        <h2>Gantt Chart</h2>
+                        <div class="card-actions">
+                            <button onclick="resetGanttFit()" class="btn-icon" title="Reset to Fit">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <polyline points="9 3 3 3 3 9"/>
+                                    <polyline points="15 3 21 3 21 9"/>
+                                    <polyline points="9 21 3 21 3 15"/>
+                                    <polyline points="15 21 21 21 21 15"/>
+                                </svg>
+                            </button>
+                            <button onclick="zoomGantt('in')" class="btn-icon" title="Zoom In">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                                    <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+                                </svg>
+                            </button>
+                            <button onclick="zoomGantt('out')" class="btn-icon" title="Zoom Out">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                                    <line x1="8" y1="11" x2="14" y2="11"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="gantt-container">
+                        <div id="gantt" class="gantt-timeline"></div>
+                    </div>
+                </section>
+
+                <section class="card card-elevated explanation-card">
+                    <div class="card-header">
+                        <h2>Algorithm Explanation</h2>
+                    </div>
+                    <div id="step-explanation" class="explanation-content">
+                        <div class="welcome-message">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 16v-4M12 8h.01"/>
+                            </svg>
+                            <p>Run a scheduling algorithm to see step-by-step explanations</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>Decision Log</h2>
+                    </div>
+                    <div id="decision-log" class="decision-log-container"></div>
+                </section>
+
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>Performance Metrics</h2>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="result-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Process</th>
+                                    <th>Waiting Time</th>
+                                    <th>Turnaround Time</th>
+                                    <th>Response Time</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="metric-summary" class="metrics-summary"></div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Tab: Compare -->
+        <div id="tab-compare" class="tab-content">
+            <section class="card card-elevated">
+                <div class="card-header">
+                    <h2>Algorithm Comparison</h2>
+                    <p class="card-subtitle">Compare all algorithms side-by-side with the same process set</p>
+                </div>
+                <button onclick="runComparison()" class="btn-primary btn-large">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Run Comparison
+                </button>
+                <div id="compare-results" class="compare-container"></div>
+                <div class="table-wrapper">
+                    <table id="compare-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Avg Waiting Time</th>
+                                <th>Avg Turnaround Time</th>
+                                <th>Avg Response Time</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Tab: HEFT -->
+        <div id="tab-heft" class="tab-content">
+            <div class="heft-layout">
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>HEFT Scheduling for Cloud/Distributed Systems</h2>
+                        <p class="card-subtitle">Heterogeneous Earliest Finish Time for DAG task scheduling</p>
+                    </div>
+                    <div class="button-group">
+                        <button onclick="runHeftExample()" class="btn-primary">Run HEFT Example</button>
+                        <button onclick="runHeftCustom()" class="btn-secondary">Use Custom DAG</button>
+                        <button onclick="heftNextStep()" class="btn-secondary">Next Step</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="heft-dag-input">Custom DAG Definition (format: TaskID Weight Parent1,Parent2...)</label>
+                        <textarea id="heft-dag-input" class="input-field" placeholder="T1 10&#10;T2 18 T1&#10;T3 12 T1&#10;T4 14 T2,T3&#10;T5 10 T3&#10;T6 8 T4,T5"></textarea>
+                    </div>
+                    <div id="heft-info" class="info-box"></div>
+                </section>
+
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>HEFT Task Graph (DAG)</h2>
+                        <p class="card-subtitle">Nodes are tasks, arrows show dependencies</p>
+                    </div>
+                    <div id="heft-graph" class="heft-graph"></div>
+                </section>
+
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>HEFT Gantt Chart (Multi-Processor)</h2>
+                    </div>
+                    <div class="gantt-container">
+                        <div id="heft-gantt" class="heft-timeline"></div>
+                    </div>
+                </section>
+
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>HEFT Step Explanation</h2>
+                    </div>
+                    <div id="heft-step-explanation" class="explanation-content">
+                        <p>Run a HEFT schedule to see rank_u computation and processor selection</p>
+                    </div>
+                </section>
+
+                <section class="card card-elevated">
+                    <div class="card-header">
+                        <h2>HEFT Decision Log</h2>
+                    </div>
+                    <div id="heft-decision-log" class="decision-log-container"></div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>How to Use This Simulator</h2>
+                <button onclick="closeHelp()" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h3>1. Setup Tab</h3>
+                    <p>Add processes by entering their arrival time, burst time, and priority. Load examples to quickly get started.</p>
+                </div>
+                <div class="help-section">
+                    <h3>2. Choose Algorithm</h3>
+                    <p>Select from six scheduling algorithms:</p>
+                    <ul>
+                        <li><strong>FCFS</strong>: First-Come, First-Served</li>
+                        <li><strong>SJF</strong>: Shortest Job First (non-preemptive)</li>
+                        <li><strong>SRTF</strong>: Shortest Remaining Time First (preemptive)</li>
+                        <li><strong>Priority</strong>: Priority-based scheduling</li>
+                        <li><strong>HRRN</strong>: Highest Response Ratio Next</li>
+                        <li><strong>Round Robin</strong>: Time-slice rotation</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h3>3. Simulate</h3>
+                    <p>Watch the algorithm with animated visualizations. Use Play/Pause/Step controls.</p>
+                </div>
+                <div class="help-section">
+                    <h3>4. Compare</h3>
+                    <p>Run all algorithms on the same process set to compare performance.</p>
+                </div>
+                <div class="help-section">
+                    <h3>5. HEFT/Cloud</h3>
+                    <p>Explore multi-processor scheduling for DAG task graphs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script_new.js"></script>
+</body>
+</html>
