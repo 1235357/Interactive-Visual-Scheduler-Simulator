@@ -1970,10 +1970,40 @@ function parseHeftDagInput() {
 		return null;
 	}
 
-	const validIds = new Set(tasks.map(t => t.id));
-	tasks.forEach(t => {
-		t.parents = (t.parents || []).filter(pid => validIds.has(pid));
-	});
+	const tasksById = new Map();
+	for (const task of tasks) {
+		if (tasksById.has(task.id)) {
+			alert(`Duplicate HEFT task ID: ${task.id}. Use a unique ID for each task.`);
+			return null;
+		}
+		tasksById.set(task.id, task);
+	}
+
+	const indegree = new Map(tasks.map(t => [t.id, t.parents.length]));
+	const successors = new Map(tasks.map(t => [t.id, []]));
+	for (const task of tasks) {
+		for (const parentId of task.parents) {
+			if (!tasksById.has(parentId)) {
+				alert(`Unknown parent ${parentId} for HEFT task ${task.id}. Define every parent task.`);
+				return null;
+			}
+			successors.get(parentId).push(task.id);
+		}
+	}
+
+	// Validate acyclicity without recursive traversal or changing input order.
+	const ready = tasks.filter(t => indegree.get(t.id) === 0).map(t => t.id);
+	for (let index = 0; index < ready.length; index++) {
+		for (const childId of successors.get(ready[index])) {
+			const remaining = indegree.get(childId) - 1;
+			indegree.set(childId, remaining);
+			if (remaining === 0) ready.push(childId);
+		}
+	}
+	if (ready.length !== tasks.length) {
+		alert("HEFT tasks contain a dependency cycle. Remove circular dependencies and try again.");
+		return null;
+	}
 
 	return {
 		processors: HEFT_EXAMPLE.processors,
